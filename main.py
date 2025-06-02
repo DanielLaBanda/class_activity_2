@@ -1,19 +1,11 @@
 import streamlit as st
-import pickle
 import numpy as np
 import pandas as pd
 import re
 from PIL import Image
+from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from tensorflow.keras.datasets import imdb
-
-
-# =========================
-# Cargar modelo
-# =========================
-def load_model(path):
-    with open(path, "rb") as f:
-        return pickle.load(f)
 
 
 # =========================
@@ -35,31 +27,24 @@ def encode_review(review, word_index, maxlen=256):
 def text_classification_app():
     st.header("Clasificador de reseñas de películas (IMDB) 🎬")
 
-    # Cargar el modelo
-    model = load_model(
-        "models/text_classification_nn.pkl"
-    )  # Ajusta si tu ruta es diferente
+    model = load_model("models/text_classification_nn.keras")
 
-    # Cargar el índice de palabras de IMDB
     word_index = imdb.get_word_index()
-
-    # Reajustar los índices para que coincidan con el preprocesamiento original
     word_index = {k: (v + 3) for k, v in word_index.items()}
     word_index["<PAD>"] = 0
     word_index["<START>"] = 1
     word_index["<UNK>"] = 2
     word_index["<UNUSED>"] = 3
 
-    def encode_review(text):
+    def encode_review_local(text):
         tokens = text.lower().split()
         encoded = [1]  # <START>
         for word in tokens:
-            index = word_index.get(word, 2)  # <UNK> si no se encuentra
-            if index < 20000:  # 🚨 Aquí filtramos palabras fuera del rango
+            index = word_index.get(word, 2)
+            if index < 20000:
                 encoded.append(index)
         return pad_sequences([encoded], maxlen=256)
 
-    # Input del usuario
     review = st.text_area("Escribe una reseña de película (en inglés):")
 
     if st.button("Predecir"):
@@ -67,7 +52,7 @@ def text_classification_app():
             st.warning("Por favor, escribe una reseña.")
         else:
             try:
-                sequence = encode_review(review)
+                sequence = encode_review_local(review)
                 pred = model.predict(sequence)[0][0]
                 sentiment = "Positiva 🎉" if pred >= 0.5 else "Negativa 😞"
                 st.markdown(f"**Sentimiento predicho:** {sentiment}")
@@ -82,7 +67,8 @@ def text_classification_app():
 def image_classification_app():
     st.header("👕 Clasificación de Ropa (Fashion MNIST)")
 
-    model = load_model("models/image_classification_nn.pkl")
+    model = load_model("models/image_classification_nn.keras")
+
     uploaded_file = st.file_uploader(
         "Sube una imagen (28x28px en blanco y negro)", type=["png", "jpg", "jpeg"]
     )
@@ -119,7 +105,7 @@ def image_classification_app():
 def regression_app():
     st.header("📈 Predicción de Precios de Casas (Boston Housing)")
 
-    model = load_model("models/regression_nn.pkl")
+    model = load_model("models/regression_nn.keras")
 
     feature_names = [
         "CRIM",
@@ -147,7 +133,9 @@ def regression_app():
 
     if st.button("Predecir", key="regression_predict"):
         prediction = model.predict(input_data)
-        st.success(f"Precio estimado de la casa: **${prediction[0]*1000:.2f} USD**")
+        st.success(
+            f"Precio estimado de la casa: **${prediction[0][0] * 1000:.2f} USD**"
+        )
 
 
 # =========================
@@ -157,13 +145,13 @@ def about_app():
     st.header("📘 Acerca de")
     st.write(
         """
-    Esta aplicación demuestra 3 modelos de Deep Learning desarrollados con Python y Streamlit:
+        Esta aplicación demuestra 3 modelos de Deep Learning desarrollados con Python, Keras y Streamlit:
 
-    - Clasificación de Texto (IMDB)
-    - Clasificación de Imágenes (Fashion MNIST)
-    - Regresión (Boston Housing)
+        - Clasificación de Texto (IMDB)
+        - Clasificación de Imágenes (Fashion MNIST)
+        - Regresión (Boston Housing)
 
-    Cada modelo fue entrenado, serializado y cargado desde archivos `.pkl` para usarse en esta interfaz.
+        Los modelos fueron entrenados y guardados en formato `.h5` para compatibilidad con TensorFlow.
     """
     )
 
