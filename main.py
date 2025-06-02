@@ -67,7 +67,7 @@ def text_classification_app():
 def image_classification_app():
     st.header("👕 Clasificación de Ropa (Fashion MNIST)")
 
-    model = load_model("models/image_classification_nn.keras")
+    model = load_model("models/image_classification.keras")
 
     uploaded_file = st.file_uploader(
         "Sube una imagen (28x28px en blanco y negro)", type=["png", "jpg", "jpeg"]
